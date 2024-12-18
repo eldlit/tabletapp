@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model recommendation {
+  id                String    @id @default(uuid())
+  sourceItem        menu_item @relation("SourceItem", fields: [sourceItemId], references: [id])
+  sourceItemId      String
+  recommendedItem   menu_item @relation("RecommendedItem", fields: [recommendedItemId], references: [id])
+  recommendedItemId String
+  orderIndex        Int
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([sourceItemId, recommendedItemId])
+}
+
+model menu_item {
+  id                  String     @id @default(uuid())
+  title               Json
+  subtitle            Json?
+  price               String
+  foodKey             String
+  showDuringBreakfast Boolean    @default(false)
+  dietaryInfo         Json?
+  category            category   @relation(fields: [category_id], references: [id])
+  category_id          String
+  restaurant          restaurant @relation(fields: [restaurant_id], references: [id])
+  restaurant_id        String
+  orderIndex          Int
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  status              ItemStatus @default(AVAILABLE)
+
+
+  recommendationsAsSource recommendation[] @relation("SourceItem")
+  recommendationsAsTarget recommendation[] @relation("RecommendedItem")
+
+  @@index([category_id])
+  @@index([id])
+}
+
+enum ItemStatus {
+  AVAILABLE
+  UNAVAILABLE
+  ARCHIVED
+}
+
+
+
+model category {
+  id           String @id @default(uuid())
+  name         String
+  category_type String
+  order_index   Int
+
+  restaurant   restaurant @relation(fields: [restaurant_id], references: [id])
+  restaurant_id String
+  items        menu_item[]
+
+  creation_timestamp DateTime @default(now())
+  update_timestamp   DateTime @updatedAt
+}
+
+model restaurant {
+  id                 String   @id @default(uuid())
+  name               String
+  settings           Json?
+  operating_hours    Json
+  creation_timestamp DateTime @default(now())
+  update_timestamp   DateTime @updatedAt
+
+
+  categories         category[]
+  menu_items         menu_item[]
+  owner              user_table @relation(fields: [owner_id], references: [id])
+  owner_id           String
+}
+
+model user_table {
+  id         String        @id @default(uuid())
+  username   String        @unique
+  password   String
+  user_type  String
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+
+
+  restaurants restaurant[]
+}
